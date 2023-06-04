@@ -1,15 +1,14 @@
-import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { map } from 'rxjs/operators';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Post } from './post.model';
 import { PostService } from './post.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy{
  
 
   loadedPosts = [];
@@ -17,10 +16,22 @@ export class AppComponent implements OnInit {
   id: string;
   title: string;
   content: string;
+  errorSub: Subscription;
+  error = null;
 
-  constructor(private http: HttpClient, private postService: PostService) {}
+  constructor(private postService: PostService) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.errorSub = this.postService.errorHandling.subscribe(
+      error => {
+        this.error = error;
+      }
+    )
+  }
+
+  ngOnDestroy(): void {
+    this.errorSub.unsubscribe();
+  }
 
   onCreatePost(postData: { title: string; content: string }) {
     // Send Http request
@@ -35,6 +46,11 @@ export class AppComponent implements OnInit {
 
   onClearPosts() {
     // Send Http request
+    this.showLoading = true;
+    this.postService.deletePost().subscribe((data) => {
+      this.showLoading = false;
+      this.loadedPosts = [];
+    })
   }
 
   viewPost(postData:  Post){
@@ -66,6 +82,10 @@ export class AppComponent implements OnInit {
       (data) =>{
         this.showLoading = false;
         this.loadedPosts = data;
+      },
+      error => {
+        console.log(error);
+        this.error = error;
       }
     )
   }
